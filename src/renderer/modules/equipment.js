@@ -18,6 +18,7 @@ import { getSlotSvg } from "./slot-icons.js";
 import { getWeaponSvg } from "./weapon-icons.js";
 import { resolveEquippedWeaponSkills, getAvailableAttunements, resolveWarriorBurst } from "./equipment-weapon-skills.js";
 import { getSkillOptionsByType } from "./skills.js";
+import { emptyBoonPreset, fullBoonPreset } from "./equipment-boons.js";
 
 export { computeSlotStats, computeUpgradeModifiers, computeStatBreakdown } from "./stats.js";
 export { computeStats } from "./engine-bridge.js";
@@ -26,20 +27,10 @@ let _readOnly = false;
 export function setReadOnly(val) { _readOnly = val; }
 
 // Assumed boons — session-only, not persisted to builds.
-let _assumedBoons = {
-  might: 0, fury: false, alacrity: false,
-  quickness: false, protection: false, regeneration: false,
-  resolution: false, resistance: false, stability: 0,
-  swiftness: false, vigor: false, aegis: false,
-};
+let _assumedBoons = emptyBoonPreset();
 export function getAssumedBoons() { return _assumedBoons; }
 export function resetAssumedBoons() {
-  _assumedBoons = {
-    might: 0, fury: false, alacrity: false,
-    quickness: false, protection: false, regeneration: false,
-    resolution: false, resistance: false, stability: 0,
-    swiftness: false, vigor: false, aegis: false,
-  };
+  _assumedBoons = emptyBoonPreset();
 }
 
 let _sigilStacks = {};
@@ -1126,6 +1117,25 @@ export function renderEquipmentPanel() {
     _boonsExpanded = !_boonsExpanded;
     _render();
   });
+  // One-click presets: every boon at full uptime, or none.
+  const presetGroup = document.createElement("span");
+  presetGroup.className = "equip-boons__presets";
+  for (const [text, title, make] of [
+    ["All", "Assume every boon (25 Might, 25 Stability)", fullBoonPreset],
+    ["Clear", "Remove all assumed boons", emptyBoonPreset],
+  ]) {
+    const btn = document.createElement("button");
+    btn.className = "equip-boons__expand-btn";
+    btn.textContent = text;
+    btn.title = title;
+    btn.addEventListener("click", () => {
+      _assumedBoons = make();
+      _render();
+    });
+    presetGroup.append(btn);
+  }
+  boonsHeader.append(presetGroup);
+
   boonsHeader.append(expandBtn);
 
   boonsSection.append(boonsHeader);
@@ -1483,7 +1493,7 @@ export function renderEquipmentPanel() {
       const stacks = _traitBuffStacks[def.key] || 0;
       const perStack = isWvw ? def.perStack.wvw : def.perStack.pve;
       const icon = state.activeCatalog?.traitById?.get(def.traitId)?.icon || "";
-      const statLabel = def.stats.join(", ");
+      const statLabel = def.stats.map((st) => STAT_LABELS[st] || st).join(", ");
 
       const item = document.createElement("div");
       item.className = "equip-boons__item";

@@ -206,6 +206,9 @@ const STACKING_TRAIT_BUFF_DEFS = [
   // Attacker's Insight (Spellbreaker minor): +50 P/P/F per stack in PvE, +30 in WvW, max 5
   { traitId: 2130, key: "attackersInsight", label: "Attacker's Insight",
     stats: ["Power", "Precision", "Ferocity"], perStack: { pve: 50, wvw: 30 }, maxStacks: 5 },
+  // Deadly Strength (Death Magic major): +10 Power/Condition Damage per Death's Carapace stack, max 30
+  { traitId: 855, key: "deadlyStrength", label: "Death's Carapace",
+    stats: ["Power", "ConditionDamage"], perStack: { pve: 10, wvw: 10 }, maxStacks: 30 },
 ];
 
 // ---------------------------------------------------------------------------

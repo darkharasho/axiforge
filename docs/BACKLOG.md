@@ -239,6 +239,21 @@ Status key: `[ ]` open · `[x]` done · `[~]` in progress · `[?]` needs repro s
   the items with a ready target would fix both this and offering personal
   items that would just wait for setup.
 
+- [ ] **Arcane Lightning counts as a permanent +150 Ferocity.** The trait's
+  AttributeAdjust fact goes into the baseline, but the bonus only lasts 15s
+  after an arcane skill. Fix the same way as Deadly Strength (#345): add a
+  `stackingBuffStats` override for `trait:263` and a single-stack entry in
+  `STACKING_TRAIT_BUFF_DEFS`.
+
+- [ ] **Bolstered Bonds (Conduit minor, trait 2331) adds no stats.** It should
+  add stats for both equipped legends (`editor.selectedLegends`, ids
+  Legend2/3/4/6/8). PvE: Assassin 75 Power/Ferocity, Dwarf 150
+  Toughness/Vitality, Demon 75 Condition Damage/Expertise, Centaur 150 Healing
+  Power/Concentration, Entity 75 to all. WvW halves the Dwarf, Centaur and
+  Entity values (Entity is 50). Cosmic Wisdom doubles them. A prototype was
+  built during #345 and dropped, because we decided not to keep our own list
+  of buffs.
+
 ## Features
 
 - [x] **Comp history.** Builds have carried a full "who changed what" since the
