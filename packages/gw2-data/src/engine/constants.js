@@ -196,6 +196,19 @@ const STACKING_SIGIL_DEFS = [
 ];
 
 // ---------------------------------------------------------------------------
+// Stacking trait buffs
+// ---------------------------------------------------------------------------
+// Earned, in-combat stacking buffs granted by a trait. They are never part of the
+// passive baseline (see the stackingBuffStats override); the player opts in by
+// assuming a stack count in the Equipment panel. perStack is keyed by game mode
+// ("wvw" uses the competitive split, everything else the PvE value).
+const STACKING_TRAIT_BUFF_DEFS = [
+  // Attacker's Insight (Spellbreaker minor): +50 P/P/F per stack in PvE, +30 in WvW, max 5
+  { traitId: 2130, key: "attackersInsight", label: "Attacker's Insight",
+    stats: ["Power", "Precision", "Ferocity"], perStack: { pve: 50, wvw: 30 }, maxStacks: 5 },
+];
+
+// ---------------------------------------------------------------------------
 // Signet passive buffs
 // ---------------------------------------------------------------------------
 // The GW2 API does not expose these values; maintained as a static map.
@@ -341,6 +354,7 @@ module.exports = {
   BERSERK_CRIT_CHANCE,
   BERSERK_CRIT_CHANCE_WVW,
   STACKING_SIGIL_DEFS,
+  STACKING_TRAIT_BUFF_DEFS,
   SIGNET_PASSIVE_BUFFS,
   SIGNET_ACTIVE_EFFECTS,
   BOON_NAMES,

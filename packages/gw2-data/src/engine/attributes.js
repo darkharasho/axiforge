@@ -17,13 +17,14 @@ const {
   BERSERK_CRIT_CHANCE,
   BERSERK_CRIT_CHANCE_WVW,
   STACKING_SIGIL_DEFS,
+  STACKING_TRAIT_BUFF_DEFS,
   SIGNET_PASSIVE_BUFFS,
   SIGNET_ACTIVE_EFFECTS,
   ALL_STAT_KEYS,
   CONVERSION_TARGET_MAP,
 } = require("./constants");
 
-const { collectModifiers, isFuryTrait } = require("./modifiers");
+const { collectModifiers, isFuryTrait, collectActiveTraitIds } = require("./modifiers");
 const { loadOverrides } = require("./overrides");
 
 // ---------------------------------------------------------------------------
@@ -539,12 +540,30 @@ function computeAttributes(ctx, catalogs) {
   }
 
   // -------------------------------------------------------------------------
+  // Step 13b: Stacking trait buffs — assumed stacks of earned trait buffs
+  //   (e.g. Attacker's Insight). Only counted while the build has the trait.
+  // -------------------------------------------------------------------------
+  const traitBuffStats = zeroStats();
+  const traitBuffStacks = ctx.traitBuffStacks || {};
+  if (STACKING_TRAIT_BUFF_DEFS.some((def) => (traitBuffStacks[def.key] || 0) > 0)) {
+    const activeTraitIds = collectActiveTraitIds(ctx, catalogs);
+    for (const def of STACKING_TRAIT_BUFF_DEFS) {
+      const stacks = Math.min(def.maxStacks, traitBuffStacks[def.key] || 0);
+      if (stacks <= 0 || !activeTraitIds.has(def.traitId)) continue;
+      const perStack = gameMode === "wvw" ? def.perStack.wvw : def.perStack.pve;
+      for (const stat of def.stats) {
+        if (stat in traitBuffStats) traitBuffStats[stat] += stacks * perStack;
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // Step 14: Total
   // -------------------------------------------------------------------------
   const total = zeroStats();
   const sources = [base, equipmentStats, foodStats, runeStats, infusionStats,
     enrichmentStats, utilityStats, signetStats, traitStats, conversionStats,
-    boonStats, sigilStats];
+    boonStats, sigilStats, traitBuffStats];
   for (const src of sources) {
     for (const key of ALL_STAT_KEYS) {
       total[key] += src[key] || 0;
@@ -607,6 +626,7 @@ function computeAttributes(ctx, catalogs) {
     conversions: conversionStats,
     boons: boonStats,
     sigils: sigilStats,
+    traitBuffs: traitBuffStats,
     total,
     derived,
   };

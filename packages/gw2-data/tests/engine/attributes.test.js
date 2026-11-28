@@ -609,3 +609,53 @@ describe("computeAttributes", () => {
     expect(result.derived.critChance).toBeCloseTo(10, 0);
   });
 });
+
+describe("computeAttributes — stacking trait buffs (Attacker's Insight)", () => {
+  const SPELLBREAKER = 61;
+  const catalogsWithSpellbreaker = () => makeCatalogs({
+    specializationById: new Map([[SPELLBREAKER, { minorTraits: [2130] }]]),
+  });
+  const spellbreakerSpecs = [{ id: SPELLBREAKER, specializationId: SPELLBREAKER, majorChoices: {} }];
+
+  test("adds per-stack Power/Precision/Ferocity in PvE when the trait is active", () => {
+    const base = computeAttributes(makeCtx({ specializations: spellbreakerSpecs }), catalogsWithSpellbreaker());
+    const r = computeAttributes(
+      makeCtx({ specializations: spellbreakerSpecs, traitBuffStacks: { attackersInsight: 5 } }),
+      catalogsWithSpellbreaker()
+    );
+    expect(r.traitBuffs.Power).toBe(250);
+    expect(r.traitBuffs.Precision).toBe(250);
+    expect(r.traitBuffs.Ferocity).toBe(250);
+    expect(r.total.Power - base.total.Power).toBe(250);
+    expect(r.total.Toughness).toBe(base.total.Toughness);
+  });
+
+  test("uses WvW per-stack values in WvW", () => {
+    const r = computeAttributes(
+      makeCtx({ gameMode: "wvw", specializations: spellbreakerSpecs, traitBuffStacks: { attackersInsight: 2 } }),
+      catalogsWithSpellbreaker()
+    );
+    expect(r.traitBuffs.Power).toBe(60);
+  });
+
+  test("clamps stacks to the max", () => {
+    const r = computeAttributes(
+      makeCtx({ specializations: spellbreakerSpecs, traitBuffStacks: { attackersInsight: 99 } }),
+      catalogsWithSpellbreaker()
+    );
+    expect(r.traitBuffs.Power).toBe(250);
+  });
+
+  test("ignores stacks when the build lacks the trait", () => {
+    const r = computeAttributes(
+      makeCtx({ traitBuffStacks: { attackersInsight: 5 } }),
+      catalogsWithSpellbreaker()
+    );
+    expect(r.traitBuffs.Power).toBe(0);
+  });
+
+  test("contributes nothing by default", () => {
+    const r = computeAttributes(makeCtx({ specializations: spellbreakerSpecs }), catalogsWithSpellbreaker());
+    expect(r.traitBuffs.Power).toBe(0);
+  });
+});
